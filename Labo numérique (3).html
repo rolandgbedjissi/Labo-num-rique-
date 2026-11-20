@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Labo numérique</title>
+<style>
+:root{--bg:#f2f5f3;--ink:#13211c;--mute:#5b6b64;--line:#c9d5cf;--acc:#0b6b5f;--accink:#fff;--res:#9a4a00;--ok:#13693a;--bad:#b3261e;--field:#fff;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1815;--ink:#e6efeb;--mute:#93a39b;--line:#2a3b35;--acc:#4fc3b0;--accink:#06201b;--res:#f0a24f;--ok:#58d08a;--bad:#ff8a80;--field:#16231f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1815;--ink:#e6efeb;--mute:#93a39b;--line:#2a3b35;--acc:#4fc3b0;--accink:#06201b;--res:#f0a24f;--ok:#58d08a;--bad:#ff8a80;--field:#16231f;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Segoe UI",system-ui,sans-serif}
+header{padding:20px 16px 8px;max-width:640px;margin:0 auto}
+h1{margin:0;font-size:26px}
+header p{margin:2px 0 0;color:var(--mute);font-size:14px}
+nav{display:flex;gap:6px;overflow-x:auto;padding:10px 16px;max-width:640px;margin:0 auto;border-bottom:1px solid var(--line)}
+nav button{flex:none;border:1px solid var(--line);background:transparent;color:var(--ink);padding:8px 14px;border-radius:999px;font:inherit;font-size:14px;cursor:pointer}
+nav button[aria-selected="true"]{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+main{max-width:640px;margin:0 auto;padding:4px 16px 40px}
+section[hidden]{display:none}
+.blk{border-left:3px solid var(--acc);padding:2px 0 2px 14px;margin:22px 0}
+h2{font-size:17px;margin:0 0 4px}
+.hint{color:var(--mute);font-size:13px;margin:0 0 10px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px}
+label{display:flex;flex-direction:column;font-size:13px;color:var(--mute);gap:3px}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%}
+textarea{font-family:ui-monospace,Consolas,monospace;font-size:15px;min-height:100px}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.go{background:var(--acc);color:var(--accink);border:0;border-radius:8px;padding:10px 18px;font:inherit;font-weight:600;cursor:pointer}
+.out{margin-top:10px;font-size:15px}
+.out .big{font:600 20px ui-monospace,Consolas,monospace;color:var(--res)}
+.out div{margin:3px 0}
+.err{color:var(--bad)}
+.ok{color:var(--ok);font-weight:600}.bad{color:var(--bad);font-weight:600}
+.cc{border-top:1px solid var(--line);margin-top:8px;padding-top:6px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:6px 4px;border-bottom:1px solid var(--line)}
+td input{padding:6px;font-size:15px}
+.tw{overflow-x:auto}
+svg{width:100%;height:auto;margin-top:8px}
+</style>
+</head>
+<body>
+<header><h1>Labo numérique</h1><p>Calculs d’analyses chimiques. Résultats à vérifier avec ta méthode et tes normes.</p><p>Créé par GBEDJISSI Roland</p></header>
+<nav role="tablist" id="tabs"></nav>
+<main id="main"></main>
+<script>
+var $=function(i){return document.getElementById(i)};
+var TABS=["Solutions","Titrages","Eau","Étalonnage","Statistiques","Rapport"],MODS=[];
+function f(x,d){if(!isFinite(x))return"–";var a=Math.abs(x);if(a!==0&&(a<0.001||a>=1e6))return x.toExponential(3);return Number(x.toPrecision(d||4)).toString()}
+function need(){for(var i=0;i<arguments.length;i++)if(!isFinite(arguments[i]))throw"Remplis les champs nécessaires."}
+function cc(ok,t){return'<div class="cc"><span class="'+(ok?"ok":"bad")+'">Conclusion : </span>'+t+'</div>'}
+function add(t,id,title,hint,fields,fn){MODS.push({t:t,id:id,title:title,hint:hint,fields:fields,fn:fn})}
+function run(m){var el=$("o_"+m.id),g=function(k){return $(m.id+"_"+k)};try{el.innerHTML=m.fn(function(k){var v=g(k).value.trim().replace(/,/g,".");return v===""?NaN:Number(v)},function(k){return g(k).selectedIndex},function(k){return g(k).value})}catch(e){el.innerHTML='<div class="err">'+(typeof e=="string"?e:"Vérifie les valeurs saisies.")+'</div>'}}
+function blk(m){var s=document.createElement("div");s.className="blk";var h='<h2>'+m.title+'</h2><p class="hint">'+m.hint+'</p><div class="row">';
+m.fields.forEach(function(x){var id=m.id+"_"+x[0];if(x[2]=="ta")h+='<label style="grid-column:1/-1">'+x[1]+'<textarea id="'+id+'" placeholder="'+x[3]+'"></textarea></label>';else if(Array.isArray(x[2]))h+='<label>'+x[1]+'<select id="'+id+'">'+x[2].map(function(o){return"<option>"+o+"</option>"}).join("")+'</select></label>';else h+='<label>'+x[1]+'<input id="'+id+'" inputmode="decimal" value="'+(x[2]||"")+'"></label>'});
+s.innerHTML=h+'</div><button class="go">Calculer</button><div class="out" id="o_'+m.id+'"></div>';s.querySelector("button").onclick=function(){run(m)};return s}
+
+/* SOLUTIONS */
+add(0,"mol","Molarité","C = n / V et n = m / M, donc C = m / (M × V). Choisis ce que l’énoncé te donne.",[["mode","L’énoncé donne",["la masse m","le nombre de moles n"]],["m","Masse m (g)"],["M","Masse molaire M (g/mol)"],["n","Moles n (mol)"],["V","Volume V (mL)"]],function(N,S){var m=N("m"),M=N("M"),n=N("n"),V=N("V"),h="";need(V);if(V<=0)throw"V doit être positif.";
+if(S("mode")==0){need(m,M);n=m/M;h='<div>n = m / M = '+f(n)+' mol</div>'}else need(n);
+var C=n/(V/1000);h='<div class="big">C = '+f(C)+' mol/L</div><div>C = n / V</div>'+h;if(isFinite(M))h+='<div>Concentration massique : Cm = C × M = '+f(C*M)+' g/L</div>';return h});
+
+add(0,"dil","Dilution","C₁V₁ = C₂V₂. Choisis la grandeur cherchée, puis remplis les trois autres.",[["k","Je cherche",["V₁ (solution mère à prélever)","C₁ (mère)","C₂ (fille)","V₂ (fille)"]],["c1","C₁ mère (mol/L)"],["v1","V₁ mère (mL)"],["c2","C₂ fille (mol/L)"],["v2","V₂ fille (mL)"]],function(N,S){var k=S("k"),c1=N("c1"),v1=N("v1"),c2=N("c2"),v2=N("v2"),r;
+if(k==0){need(c1,c2,v2);v1=c2*v2/c1;r="V₁ = C₂V₂ / C₁ = "+f(v1)+" mL"}else if(k==1){need(v1,c2,v2);c1=c2*v2/v1;r="C₁ = C₂V₂ / V₁ = "+f(c1)+" mol/L"}else if(k==2){need(c1,v1,v2);c2=c1*v1/v2;r="C₂ = C₁V₁ / V₂ = "+f(c2)+" mol/L"}else{need(c1,v1,c2);v2=c1*v1/c2;r="V₂ = C₁V₁ / C₂ = "+f(v2)+" mL"}
+var h='<div class="big">'+r+'</div>';if(c1>0&&c2>0)h+='<div>Facteur de dilution : F = C₁ / C₂ = '+f(c1/c2)+'</div>';if(isFinite(v1)&&isFinite(v2))h+='<div>Eau à ajouter : V₂ − V₁ = '+f(v2-v1)+' mL</div>';if(c2>c1)h+='<div class="bad">C₂ > C₁ : ce n’est pas une dilution.</div>';return h});
+
+add(0,"dis","Dissolution d’un solide","m = C × V × M / pureté. Pour préparer une solution de concentration voulue.",[["c","Concentration voulue C (mol/L)"],["v","Volume V (mL)"],["M","Masse molaire M (g/mol)"],["p","Pureté (%)","100"]],function(N){var c=N("c"),v=N("v"),M=N("M"),p=N("p");need(c,v,M,p);if(p<=0||p>100)throw"La pureté est entre 0 et 100 %.";var n=c*v/1000,m=n*M/(p/100);
+return'<div class="big">m = '+f(m)+' g</div><div>n = C × V = '+f(n)+' mol</div><div>Pèse '+f(m)+' g, dissous dans un peu d’eau distillée, transvase dans une fiole jaugée de '+f(v)+' mL, puis complète au trait de jauge.</div>'});
+
+var PF=["pH = −log (n × C)","pH = 14 + log (n × C)","pH = ½ (pKa − log C)","pH = 14 − ½ (pKb − log C)"];
+var NM=["acide fort (se dissocie totalement : HA + H₂O → A⁻ + H₃O⁺)","base forte (se dissocie totalement : B + H₂O → BH⁺ + OH⁻)","acide faible (se dissocie partiellement dans l’eau)","base faible (réagit partiellement avec l’eau)"];
+add(0,"ph","pH","Formule générale : pH = −log [H₃O⁺]. Le calcul dépend de la nature de l’espèce (25 °C, solution pas trop diluée).",[["nat","Nature",["Acide fort","Base forte","Acide faible","Base faible"]],["c","C (mol/L)"],["n","n (1 = mono, 2 = di)","1"],["k","pKa (acide faible) ou pKb (base faible)"]],function(N,S){var t=S("nat"),c=N("c"),n=N("n"),k=N("k"),p;need(c);if(c<=0)throw"C doit être positive.";
+if(t<2){need(n);p=t==0?-Math.log10(n*c):14+Math.log10(n*c)}else{need(k);p=t==2?0.5*(k-Math.log10(c)):14-0.5*(k-Math.log10(c))}
+var sub=t==0?'−log ('+f(n)+' × '+f(c)+')':t==1?'14 + log ('+f(n)+' × '+f(c)+')':t==2?'½ ('+f(k)+' − log '+f(c)+')':'14 − ½ ('+f(k)+' − log '+f(c)+')';
+return'<div class="big">pH = '+f(p,3)+'</div><div class="cc"><b>Calcul étape par étape</b><div>0. Rappel : pH = −log [H₃O⁺] et pH + pOH = 14 (à 25 °C).</div><div>1. Nature de l’espèce : '+NM[t]+'.</div><div>2. Formule : '+PF[t]+'</div><div>3. On remplace : pH = '+sub+'</div><div>4. Résultat : pH = <b>'+f(p,3)+'</b></div><div>5. Vérification : [H₃O⁺] = 10<sup>−pH</sup> = '+f(Math.pow(10,-p))+' mol/L ; pOH = 14 − pH = '+f(14-p,3)+'</div></div>'+(t>=2?'<div class="hint">Formule valable si l’espèce est peu dissociée et la solution pas trop diluée (C > 10⁻⁶ mol/L).</div>':'<div class="hint">Formule valable pour 10⁻⁶ < n × C < 10⁻¹ mol/L.</div>')+cc(true,p<6.95?"solution acide.":p>7.05?"solution basique.":"solution neutre.")});
+
+/* TITRAGES */
+var TT=[["Acide-base (acide + soude)","HA + OH⁻ → A⁻ + H₂O",1,1],["Redox (Fe²⁺ + permanganate)","5 Fe²⁺ + MnO₄⁻ + 8 H⁺ → 5 Fe³⁺ + Mn²⁺ + 4 H₂O",5,1],["Complexométrie (EDTA)","M²⁺ + Y⁴⁻ → MY²⁻",1,1],["Argentimétrie (chlorures + Ag⁺)","Cl⁻ + Ag⁺ → AgCl",1,1],["Autre (a et b libres)","a A + b T → produits",1,1]];
+add(1,"tit","Concentration par titrage","À l’équivalence : Ct × Véq / b = Cx × Vx / a. Choisis le type : a et b se remplissent seuls (modifiables).",[["t","Type de titrage",TT.map(function(x){return x[0]})],["ct","Ct titrant (mol/L)"],["ve","Véq (mL)"],["vx","Vx prise d’essai (mL)"],["a","a (analyte)","1"],["b","b (titrant)","1"],["M","M analyte (g/mol), facultatif"]],function(N,S){var ct=N("ct"),ve=N("ve"),vx=N("vx"),a=N("a"),b=N("b"),M=N("M");need(ct,ve,vx,a,b);if(vx<=0||b<=0)throw"Vx et b doivent être positifs.";
+var cx=ct*ve*a/(b*vx),h='<div class="big">Cx = '+f(cx)+' mol/L</div><div>Réaction : '+TT[S("t")][1]+'</div><div>Cx = Ct × Véq × a / (b × Vx)</div><div>n(titrant versé) = Ct × Véq = '+f(ct*ve)+' mmol</div>';if(isFinite(M))h+='<div>Concentration massique : '+f(cx*M)+' g/L</div>';return h});
+
+add(1,"dur","Dureté de l’eau (EDTA)","TH = [Ca²⁺] + [Mg²⁺], avec [ion] = C(EDTA) × V / V(échantillon). Dosage 1 (pH 10, NET) : Ca²⁺ + Mg²⁺. Dosage 2 (pH 12, murexide) : Ca²⁺ seul.",[["c","C EDTA (mol/L)"],["v1","V₁ EDTA, Ca²⁺ + Mg²⁺ (mL)"],["v2","V₂ EDTA, Ca²⁺ seul (mL)"],["e","V échantillon (mL)","100"]],function(N){var c=N("c"),v1=N("v1"),v2=N("v2"),e=N("e");need(c,v1,v2,e);if(v2>v1)throw"V₂ ne peut pas dépasser V₁.";
+var th=c*v1/e*1000,ca=c*v2/e*1000,mg=th-ca,d=th*10,k=d<7?"très douce":d<15?"douce":d<25?"moyennement dure":d<42?"dure":"très dure";
+return'<div>Ca²⁺ = C × V₂ / Ve = <b>'+f(ca)+'</b> mmol/L ('+f(ca*40.08)+' mg/L)</div><div>Mg²⁺ = TH − Ca²⁺ = <b>'+f(mg)+'</b> mmol/L ('+f(mg*24.31)+' mg/L)</div><div class="big">TH = '+f(d,3)+' °f</div><div>TH = '+f(th)+' mmol/L, soit '+f(th*100.09)+' mg/L de CaCO₃ (1 °f = 0,1 mmol/L)</div>'+cc(d<42,"eau "+k+". La dureté ne présente pas de risque sanitaire direct ; une eau dure entartre les appareils et consomme plus de savon.")});
+
+/* STATISTIQUES et ÉTALONNAGE */
+function nums(s){return s.replace(/,/g,".").split(/[\s;]+/).filter(function(x){return x!==""}).map(Number).filter(isFinite)}
+function reg(p){var n=p.length,sx=0,sy=0;p.forEach(function(q){sx+=q[0];sy+=q[1]});var mx=sx/n,my=sy/n,sxx=0,sxy=0,syy=0;p.forEach(function(q){sxx+=(q[0]-mx)*(q[0]-mx);sxy+=(q[0]-mx)*(q[1]-my);syy+=(q[1]-my)*(q[1]-my)});var m=sxy/sxx,b=my-m*mx,ss=0;p.forEach(function(q){var d=q[1]-(m*q[0]+b);ss+=d*d});return{m:m,b:b,r2:syy===0?1:1-ss/syy,s:n>2?Math.sqrt(ss/(n-2)):NaN,mx:mx,my:my,sxx:sxx,sxy:sxy}}
+add(3,"et","Courbe d’étalonnage","Saisis tes étalons obtenus après l’analyse, une ligne par étalon : concentration ; signal (absorbance…).",[["d","Étalons","ta","0 ; 0\n2 ; 0.10\n4 ; 0.20"],["y","Signal de l’échantillon"]],function(N,S,T){var p=[];T("d").split("\n").forEach(function(l){var q=nums(l);if(q.length>=2)p.push([q[0],q[1]])});if(p.length<3)throw"Il faut au moins 3 étalons (concentration ; signal).";
+var r=reg(p),y=N("y"),xs=p.map(function(q){return q[0]}),ys=p.map(function(q){return q[1]}),x0=Math.min.apply(null,xs),x1=Math.max.apply(null,xs),y0=Math.min.apply(null,ys),y1=Math.max.apply(null,ys);
+var eq='y = '+f(r.m)+' x '+(r.b<0?'− ':'+ ')+f(Math.abs(r.b));var h='<div class="big">'+eq+'</div><div>R² = <b>'+f(r.r2,5)+'</b> ('+(r.r2>=0.999?'excellent':r.r2>=0.995?'bon':r.r2>=0.99?'limite':'insuffisant')+')</div>'+'<div class="cc"><b>Formule :</b> y = a·x + b, avec y = signal (absorbance…), x = concentration, a = pente, b = ordonnée à l’origine.</div>'+'<div class="cc"><b>Comment on obtient la droite (régression linéaire)</b>'+'<div>1. Moyennes : x̄ = Σx / n = '+f(r.mx)+' ; ȳ = Σy / n = '+f(r.my)+'</div>'+'<div>2. Sxx = Σ(x − x̄)² = '+f(r.sxx)+' ; Sxy = Σ(x − x̄)(y − ȳ) = '+f(r.sxy)+'</div>'+'<div>3. Pente : a = Sxy / Sxx = '+f(r.m)+'</div>'+'<div>4. Ordonnée à l’origine : b = ȳ − a·x̄ = '+f(r.b)+'</div>'+'<div>5. Équation de la droite : '+eq+'</div>'+'<div>6. Pour doser : on mesure le signal y de l’échantillon, puis x = (y − b) / a.</div></div>'+'<div class="cc"><b>Signification de R²</b> (coefficient de détermination) : R² = 1 − Σ(y − ŷ)² / Σ(y − ȳ)² = '+f(r.r2,5)+'. Il mesure à quel point les points sont alignés sur la droite. R² = 1 : alignement parfait. Entre 0,995 et 1 : droite acceptable pour doser. Sous 0,99 : points trop dispersés, refais les étalons (erreur de dilution, de pesée ou de lecture). Un R² proche de 1 montre que le signal est proportionnel à la concentration, pas que le résultat est exact.</div>';if(isFinite(r.s))h+='<div>Limite de détection ≈ '+f(3.3*r.s/r.m)+' ; de quantification ≈ '+f(10*r.s/r.m)+'</div>';
+var lin=r.r2>=0.995,inr=isFinite(y)&&y>=y0&&y<=y1;if(isFinite(y))h+='<div class="big">Cx = '+f((y-r.b)/r.m)+'</div>';
+function X(v){return 30+(v-x0)/((x1-x0)||1)*270}function Y(v){return 170-(v-y0)/((y1-y0)||1)*150}
+var s='<svg viewBox="0 0 320 190" role="img" aria-label="Courbe d’étalonnage"><line x1="30" y1="170" x2="300" y2="170" stroke="var(--line)"/><line x1="30" y1="20" x2="30" y2="170" stroke="var(--line)"/><line x1="'+X(x0)+'" y1="'+Y(r.m*x0+r.b)+'" x2="'+X(x1)+'" y2="'+Y(r.m*x1+r.b)+'" stroke="var(--acc)" stroke-width="2"/>';
+p.forEach(function(q){s+='<circle cx="'+X(q[0])+'" cy="'+Y(q[1])+'" r="4" fill="var(--res)"/>'});h+=s+'</svg>';
+if(!isFinite(y))return h+cc(lin,lin?"droite linéaire (R² ≥ 0,995). Saisis le signal de l’échantillon pour le doser.":"R² < 0,995 : la droite n’est pas assez linéaire, refais la gamme.");
+return h+cc(lin&&inr&&r.m>0,lin&&inr&&r.m>0?"tout va bien : droite linéaire et échantillon dans la gamme, le dosage est valable.":"le dosage n’est pas valable : "+(lin?"":"droite peu linéaire (R² < 0,995) ; ")+(inr?"":"signal hors de la gamme, dilue l’échantillon ou refais la gamme ; ")+(r.m>0?"":"pente négative ou nulle."))});
+
+add(4,"st","Statistiques d’une série de mesures","Saisis tes mesures répétées, séparées par un espace ou un retour à la ligne.",[["d","Mesures","ta","10.2 10.4 10.1 10.3"],["ref","Valeur de référence (facultatif)"]],function(N,S,T){var v=nums(T("d")),r=N("ref"),n=v.length;if(n<2)throw"Entre au moins 2 mesures.";
+var m=v.reduce(function(a,b){return a+b},0)/n,sd=Math.sqrt(v.reduce(function(a,b){return a+(b-m)*(b-m)},0)/(n-1)),em=v.reduce(function(a,b){return a+Math.abs(b-m)},0)/n,w=v.slice().sort(function(a,b){return a-b}),med=n%2?w[(n-1)/2]:(w[n/2-1]+w[n/2])/2,c={},mx=0;
+v.forEach(function(x){c[x]=(c[x]||0)+1;if(c[x]>mx)mx=c[x]});var mo=mx>1?Object.keys(c).filter(function(k){return c[k]==mx}).join(" ; "):"aucun",rsd=m?sd/Math.abs(m)*100:NaN;
+var h='<div class="big">'+f(m)+' ± '+f(sd)+'</div><div class="cc"><b>Calcul étape par étape (n = '+n+')</b><div>1. Moyenne : x̄ = Σxᵢ / n = '+f(m*n)+' / '+n+' = <b>'+f(m)+'</b></div><div>2. Médiane (valeur du milieu, mesures rangées) : '+w.map(function(x){return f(x)}).join(' ; ')+' → <b>'+f(med)+'</b></div><div>3. Mode (valeur la plus fréquente) : <b>'+mo+'</b></div><div>4. Étendue = max − min = '+f(w[n-1])+' − '+f(w[0])+' = <b>'+f(w[n-1]-w[0])+'</b></div><div>5. Écart moyen = Σ|xᵢ − x̄| / n = <b>'+f(em)+'</b></div><div>6. Écart-type : s = √[Σ(xᵢ − x̄)² / (n − 1)] = √['+f(sd*sd*(n-1))+' / '+(n-1)+'] = <b>'+f(sd)+'</b></div><div>7. Erreur aléatoire : RSD = s / x̄ × 100 = <b>'+f(rsd,3)+' %</b></div><div>8. Erreur-type de la moyenne = s / √n = <b>'+f(sd/Math.sqrt(n))+'</b></div></div>',jus=true;
+if(isFinite(r)){var ea=m-r,er=r?ea/r*100:NaN;jus=Math.abs(er)<=5;h+='<div class="cc"><b>Erreur systématique</b> (écart à la référence)<div>9. Erreur absolue : Ea = x̄ − référence = '+f(m)+' − '+f(r)+' = <b>'+f(ea)+'</b></div><div>10. Erreur relative : Er = Ea / référence × 100 = <b>'+f(er,3)+' %</b></div></div>'}
+return h+cc(rsd<=5&&jus,(rsd<=5?"répétabilité bonne (RSD ≤ 5 %)":"dispersion trop grande (RSD > 5 %), refais des mesures")+(isFinite(r)?(jus?" et résultat juste (erreur relative ≤ 5 %).":" mais résultat éloigné de la référence (erreur relative > 5 %).") :".")+" Critères indicatifs, adapte-les à ta méthode.")});
+
+/* EAU */
+var P=[["pH",6.5,8.5],["Turbidité (NTU)",0,5],["Nitrates (mg/L)",0,50],["Nitrites (mg/L)",0,3],["Fer (mg/L)",0,0.3],["Chlorures (mg/L)",0,250]];
+function eauBlk(){var s=document.createElement("div");s.className="blk";var h='<h2>Conformité de l’eau</h2><p class="hint">Entre tes mesures. Les limites sont modifiables (valeurs guides courantes de l’OMS par défaut) : vérifie la norme de ton laboratoire.</p><div class="tw"><table><thead><tr><th>Paramètre</th><th>Mesure</th><th>Min</th><th>Max</th><th>Verdict</th></tr></thead><tbody>';
+P.forEach(function(p,i){h+='<tr><td>'+p[0]+'</td><td><input id="w'+i+'" inputmode="decimal" style="min-width:70px"></td><td><input id="a'+i+'" value="'+p[1]+'" inputmode="decimal" style="min-width:60px"></td><td><input id="z'+i+'" value="'+p[2]+'" inputmode="decimal" style="min-width:60px"></td><td id="r'+i+'">–</td></tr>'});
+s.innerHTML=h+'</tbody></table></div><p><button class="go">Évaluer</button></p><div class="out" id="o_eau"></div>';
+s.querySelector("button").onclick=function(){var nb=0,mal=[],N=function(id){var v=$(id).value.trim().replace(/,/g,".");return v===""?NaN:Number(v)};
+P.forEach(function(p,i){var v=N("w"+i),lo=N("a"+i),hi=N("z"+i),c=$("r"+i);if(!isFinite(v)){c.textContent="–";c.className="";return}nb++;var ok=(!isFinite(lo)||v>=lo)&&(!isFinite(hi)||v<=hi);c.textContent=ok?"Conforme":"Hors limite";c.className=ok?"ok":"bad";if(!ok)mal.push(p[0])});
+$("o_eau").innerHTML=nb==0?'<div class="err">Entre au moins une mesure.</div>':mal.length?cc(false,"eau non conforme, hors limite : "+mal.join(", ")+". Elle n’est pas propre à la consommation sans traitement."):cc(true,"les "+nb+" paramètre(s) mesuré(s) respectent les limites : eau propre à la consommation sur ces critères (la microbiologie n’est pas couverte).")};return s}
+
+/* RAPPORT DE TP */
+var PR={
+mol:["La concentration molaire relie la quantité de matière au volume : C = n / V, avec n = m / M.","Balance, fiole jaugée, entonnoir, eau distillée.","Peser la masse, dissoudre, transvaser dans la fiole jaugée, compléter au trait de jauge."],
+dil:["Lors d’une dilution la quantité de matière se conserve : C₁V₁ = C₂V₂.","Pipette jaugée, propipette, fiole jaugée, eau distillée.","Prélever V₁ à la pipette jaugée, la verser dans la fiole, compléter au trait de jauge, homogénéiser."],
+dis:["Pour préparer une solution de concentration C à partir d’un solide : m = C × V × M / pureté.","Balance, coupelle, fiole jaugée, entonnoir, eau distillée.","Peser m, dissoudre dans un peu d’eau, transvaser, compléter au trait de jauge."],
+ph:["Le pH mesure l’acidité : pH = −log [H₃O⁺]. Son calcul dépend de la nature de l’espèce (acide ou base, forte ou faible).","pH-mètre étalonné, béchers, eau distillée.","Étalonner le pH-mètre, rincer l’électrode, mesurer le pH et le comparer au pH calculé."],
+tit:["Le titrage repose sur une réaction totale, rapide et unique. À l’équivalence : Ct × Véq / b = Cx × Vx / a.","Burette, pipette jaugée, erlenmeyer, agitateur, indicateur coloré.","Remplir la burette, introduire Vx dans l’erlenmeyer avec l’indicateur, verser le titrant jusqu’au changement de couleur (Véq)."],
+dur:["La dureté vient des ions Ca²⁺ et Mg²⁺, dosés à l’EDTA (complexométrie) : TH = [Ca²⁺] + [Mg²⁺].","Burette, EDTA, tampon pH 10 et NET, soude et murexide, erlenmeyers.","Dosage 1 à pH 10 (NET) : Ca²⁺ + Mg²⁺. Dosage 2 à pH 12 (murexide) : Ca²⁺ seul. Relever V₁ et V₂."],
+eau:["Les paramètres mesurés sont comparés aux valeurs limites de la norme pour juger la conformité de l’eau.","pH-mètre, turbidimètre, matériel de dosage, flacons d’échantillonnage.","Prélever l’échantillon, mesurer chaque paramètre, comparer aux limites."],
+et:["Le signal est proportionnel à la concentration (loi de Beer-Lambert) : y = a·x + b. La droite d’étalonnage permet de doser l’échantillon.","Fioles jaugées, étalons, spectrophotomètre, cuves.","Préparer les étalons, mesurer leur signal, tracer la droite, mesurer le signal de l’échantillon et en déduire Cx."],
+st:["Des mesures répétées se décrivent par la moyenne, la dispersion (écart-type, RSD) et l’écart à la référence (erreur).","Matériel de la mesure répétée.","Répéter la mesure dans les mêmes conditions et calculer les grandeurs statistiques."]};
+var OB={mol:["déterminer la concentration molaire d’une solution à partir de la masse dissoute ou de la quantité de matière.","la concentration est la grandeur de base pour préparer et utiliser toute solution au laboratoire."],dil:["calculer le volume de solution mère à prélever (ou une autre grandeur) pour obtenir une solution diluée.","les solutions de travail sont souvent préparées par dilution à partir de solutions concentrées."],dis:["calculer la masse de solide à peser pour préparer une solution de concentration donnée.","une solution mal préparée fausse tous les dosages qui suivent."],ph:["calculer le pH d’une solution selon la nature de l’espèce (acide ou base, forte ou faible).","le pH conditionne les réactions chimiques, la qualité de l’eau et la conservation des produits."],tit:["déterminer la concentration d’une solution inconnue par titrage.","le titrage est une méthode de dosage précise et courante en contrôle qualité."],dur:["déterminer la dureté de l’eau en dosant les ions Ca²⁺ et Mg²⁺ à l’EDTA.","la dureté influe sur le goût de l’eau, l’entartrage des appareils et l’usage du savon."],eau:["comparer les paramètres de l’eau aux valeurs limites pour juger sa conformité.","l’eau destinée à la consommation doit respecter des normes pour protéger la santé."],et:["établir une droite d’étalonnage et l’utiliser pour doser un échantillon.","l’étalonnage permet de doser rapidement de faibles concentrations avec un appareil de mesure."],st:["évaluer la fidélité (répétabilité) et la justesse d’une série de mesures.","une mesure n’a de valeur que si l’on connaît son erreur et sa fiabilité."]};
+var DS={mol:"pesée imprécise, perte de produit au transfert, volume mal ajusté au trait de jauge.",dil:"pipette mal rincée, ménisque mal lu, mélange insuffisant.",dis:"pureté du produit, solide hygroscopique (reprise d’humidité), pesée imprécise.",ph:"électrode mal étalonnée, température différente de 25 °C, approximations des formules.",tit:"mauvais repérage du virage, lecture de la burette, bulle d’air, concentration du titrant mal connue.",dur:"virage difficile à voir, pH mal ajusté, EDTA mal étalonné.",eau:"échantillon contaminé, appareils mal étalonnés, conservation de l’échantillon.",et:"étalons mal préparés, cuve sale, dérive de l’appareil, signal hors gamme.",st:"erreurs aléatoires (lecture, manipulation) et erreur systématique (appareil mal réglé)."};
+function T(h){return h.replace(/<svg[\s\S]*?<\/svg>/g,"").replace(/<\/(div|p|tr)>/g,"\n").replace(/<[^>]+>/g,"").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/[ \t]+\n/g,"\n").replace(/\n{2,}/g,"\n").trim()}
+function got(id){var e=$("o_"+id);return e&&e.innerHTML&&!e.querySelector(".err")}
+function dat(m){var a=[];m.fields.forEach(function(x){var e=$(m.id+"_"+x[0]);if(!e)return;var v=Array.isArray(x[2])?e.options[e.selectedIndex].text:e.value.trim();if(v)a.push(x[1]+" = "+v.replace(/\n/g," / "))});return a.join(" ; ")}
+function datEau(){var a=[];P.forEach(function(p,i){var v=$("w"+i).value.trim();if(v)a.push(p[0]+" = "+v+" ("+$("r"+i).textContent+")")});return a.join(" ; ")}
+function bilan(){var L=[];MODS.concat([{id:"eau",title:"Conformité de l’eau"}]).forEach(function(m){if(got(m.id))L.push({id:m.id,t:m.title,d:m.id=="eau"?datEau():dat(m),r:T($("o_"+m.id).innerHTML)})});return L}
+function rapport(){var L=bilan();if(!L.length)return"";var s="RAPPORT DE TP : "+($("r_ti").value||"Travaux pratiques")+"\nNom : "+($("r_nom").value||"…")+"\nDate : "+new Date().toLocaleDateString("fr-FR")+"\n\n1. OBJECTIF\nBut du TP :\n"+L.map(function(x){return"- "+x.t+" : "+OB[x.id][0]}).join("\n")+"\n\nIntérêt (pourquoi ce TP) :\n"+L.map(function(x){return"- "+x.t+" : "+OB[x.id][1]}).join("\n")+"\n\n",c=function(k,t){s+=t+"\n";L.forEach(function(x){s+="- "+x.t+" : "+PR[x.id][k]+"\n"});s+="\n"};
+c(0,"2. PRINCIPE");c(1,"3. MATÉRIEL ET RÉACTIFS");c(2,"4. MODE OPÉRATOIRE");s+="5. RÉSULTATS ET CALCULS\n";
+L.forEach(function(x){s+="\n"+x.t+"\nDonnées : "+x.d+"\n"+x.r.replace(/Conclusion : .*/g,"").replace(/\n+$/,"")+"\n"});
+var k=[];L.forEach(function(x){var q=x.r.match(/Conclusion : .*/g);if(q)q.forEach(function(z){k.push("- "+x.t+" : "+z.replace("Conclusion : ",""))});else k.push("- "+x.t+" : résultat obtenu, "+x.r.split("\n")[0]+".")});
+s+="\n6. DISCUSSION (sources d’erreur possibles)\n";L.forEach(function(x){s+="- "+x.t+" : "+DS[x.id]+"\n"});return s+"\n7. CONCLUSION\n"+(k.length?k.join("\n"):"À compléter.")}
+var REDIT=false;
+function autoR(force){if(REDIT&&!force)return;var r=rapport();if(!r){if(force)$("r_m").textContent="Fais d’abord au moins un calcul dans les autres onglets.";return}$("r_t").value=r;REDIT=false;$("r_m").textContent="Rapport écrit automatiquement. Relis-le et complète-le."}
+var KW=[[/dilu/i,"Solutions › Dilution"],[/molarit|concentration molaire|masse molaire/i,"Solutions › Molarité"],[/dissol|préparer une solution/i,"Solutions › Dissolution"],[/\bpH\b/,"Solutions › pH"],[/titr|dosage|doser|équivalence|burette/i,"Titrages › Concentration par titrage"],[/dureté|EDTA|calcium|magnésium/i,"Titrages › Dureté"],[/potable|conforme|nitrate|turbidité|chlorure/i,"Eau"],[/étalonnage|absorbance|spectro|beer/i,"Étalonnage"],[/moyenne|écart|statisti|répét|erreur/i,"Statistiques"]];
+function hint(){var t=$("r_en").value,a=[];KW.forEach(function(k){if(k[0].test(t))a.push(k[1])});$("r_h").textContent=a.length?"D’après l’énoncé, utilise : "+a.join(" ; ")+".":""}
+function rapBlk(){var s=document.createElement("div");s.className="blk";
+s.innerHTML='<h2>Rapport de TP</h2><p class="hint">Écris l’énoncé, puis fais tes calculs dans les autres onglets : le rapport s’écrit tout seul avec tes données, tes calculs et tes conclusions. Tu peux ensuite le modifier.</p><div class="row"><label>Nom et prénom<input id="r_nom"></label><label>Titre du TP<input id="r_ti"></label></div><label style="margin-bottom:6px">Énoncé du TP (sert à t’orienter, il n’est pas recopié dans le rapport)<textarea id="r_en" placeholder="Écris ou colle l’énoncé ici"></textarea></label><div class="hint" id="r_h"></div><p><button class="go" id="r_g">Mettre à jour le rapport</button> <button class="go" id="r_k">Copier</button></p><textarea id="r_t" style="min-height:380px" aria-label="Rapport de TP"></textarea><div class="hint" id="r_m">« Mettre à jour » réécrit le rapport et efface tes modifications.</div>';
+setTimeout(function(){var M=function(t){$("r_m").textContent=t};
+$("r_t").oninput=function(){REDIT=true};$("r_en").oninput=hint;$("r_g").onclick=function(){autoR(true)};
+$("r_k").onclick=function(){var t=$("r_t");t.select();try{navigator.clipboard.writeText(t.value).then(function(){M("Copié.")},function(){document.execCommand("copy");M("Copié.")})}catch(e){document.execCommand("copy");M("Copié.")}}},0);
+return s}
+/* AFFICHAGE */
+var nav=$("tabs"),main=$("main");
+TABS.forEach(function(t,i){var b=document.createElement("button");b.textContent=t;b.setAttribute("role","tab");b.setAttribute("aria-selected",i==0);b.onclick=function(){show(i)};nav.appendChild(b);var s=document.createElement("section");s.id="p"+i;s.hidden=i!=0;main.appendChild(s)});
+function show(k){if(k==5)autoR();TABS.forEach(function(_,i){$("p"+i).hidden=i!=k;nav.children[i].setAttribute("aria-selected",i==k)})}
+MODS.forEach(function(m){$("p"+m.t).appendChild(blk(m))});
+$("p2").appendChild(eauBlk());
+$("p5").appendChild(rapBlk());
+$("tit_t").onchange=function(){var t=TT[this.selectedIndex];$("tit_a").value=t[2];$("tit_b").value=t[3]};
+</script>
+</body>
+</html>
